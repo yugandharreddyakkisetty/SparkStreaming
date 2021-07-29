@@ -6,6 +6,7 @@ import numpy as np  # pip install numpy
 from sys import argv, exit
 from time import time, sleep
 import datetime
+import json
 
 # different device "profiles" with different
 # distributions of values to make things interesting
@@ -27,35 +28,30 @@ if len(argv) != 2 or argv[1] not in DEVICE_PROFILES.keys():
 profile_name = argv[1]
 profile = DEVICE_PROFILES[profile_name]
 
-
-
-
-
 # set up the producer
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
 
 count = 1
 
+current_time = datetime.datetime.now()
 # until ^C
 while True:
-	current_time=""
-	if profile_name == "boston":
-		current_time = datetime.datetime.now()
-	if profile_name == "denver":
-		current_time = datetime.datetime.now() - datetime.timedelta(minutes=20)
-	if profile_name == "losang":
-		current_time = datetime.datetime.now() - datetime.timedelta(minutes=5)
-
-
-
 	# get random values within a normal distribution of the value
 	temp = np.random.normal(profile['temp'][0], profile['temp'][1])
 	humd = max(0, min(np.random.normal(profile['humd'][0], profile['humd'][1]), 100))
 	pres = np.random.normal(profile['pres'][0], profile['pres'][1])
 
 	# create CSV structure
-	msg = f'{current_time},{profile_name},{temp},{humd},{pres}'
-	print(msg)
+	# msg = f'{current_time},{profile_name},{temp},{humd},{pres}'
+	# create json structure
+	iot_msg = {
+		"current_time":str(current_time),
+		"profile_name":profile_name,
+		"temp":temp,
+		"humd":humd,
+		"pres":pres
+	}
+	msg = json.dumps(iot_msg)
 
 	# send to Kafka
 	producer.send('weather', bytes(msg, encoding='utf8'))

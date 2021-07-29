@@ -4,7 +4,7 @@
 		module="sparkstreaming-build"
 		revision="0.1.0-SNAPSHOT"
 		status="integration"
-		publication="20210728123756"
+		publication="20210729173614"
 		e:sbtVersion="1.0" e:scalaVersion="2.12"
 	>
 		<description>
