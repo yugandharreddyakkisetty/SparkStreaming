@@ -4,6 +4,7 @@ import org.apache.spark.sql.streaming._
 import org.apache.spark.sql.types._
 import java.sql.{Connection, DriverManager, Statement, Timestamp}
 import java.util.Properties
+
 case class DeviceData(device: String, temp: Double, humd: Double, pres: Double,timestamp:Timestamp)
 class JDBCSink(url:String,user:String,pwd:String) extends ForeachWriter[DeviceData]{
   val driver = "org.postgresql.Driver"
@@ -100,11 +101,11 @@ object StreamHandlerKafka {
 //      .start()
 //    consoleQuery.awaitTermination()
 //
-//    // foreach writer
-//
-//    val customWriter = new JDBCSink(prop.getProperty("url"),prop.getProperty("user"),prop.getProperty("password"))
-//    val foreachQuery=rawDF.writeStream.foreach(customWriter).outputMode("append").start()
-//    foreachQuery.awaitTermination()
+    // foreach writer
+
+    val customWriter = new JDBCSink(prop.getProperty("url"),prop.getProperty("user"),prop.getProperty("password"))
+    val foreachQuery=rawDF.writeStream.foreach(customWriter).outputMode("append").start()
+    foreachQuery.awaitTermination()
 
     // foreachbatch
     val foreachBatchQuery = rawDF.writeStream.foreachBatch(forEachBatchSink).outputMode("append").start()
