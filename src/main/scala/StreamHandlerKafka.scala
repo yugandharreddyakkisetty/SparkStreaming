@@ -47,7 +47,7 @@ object StreamHandlerKafka {
       .format("kafka")
       .option("kafka.bootstrap.servers","localhost:9092")
       .option("startingOffsets","latest")
-      .option("subscribe","weather1")
+      .option("subscribe","weather")
       .load()
 
 
@@ -71,6 +71,7 @@ object StreamHandlerKafka {
         Timestamp.valueOf(row(0))
       )).withWatermark("timestamp","10 minutes")
       */
+
     val rawDF = inputDF.select(
       get_json_object(($"value").cast("string"),"$.profile_name").alias("device"),
       get_json_object(($"value").cast("string"),"$.temp").alias("temp").cast(DoubleType),
@@ -78,9 +79,10 @@ object StreamHandlerKafka {
       get_json_object(($"value").cast("string"),"$.pres").alias("pres").cast(DoubleType),
       get_json_object(($"value").cast("string"),"$.current_time").alias("timestamp")
     ).withColumn("timestamp",to_timestamp(col("timestamp")))
-      .withWatermark("timestamp","10 minutes").as[DeviceData]
+//      .withWatermark("timestamp","10 minutes").as[DeviceData]
 
-  /*
+   // Output modes
+    /*
     Complete Mode - The entire updated Result Table will be written to the external storage.
                     It is up to the storage connector to decide how to handle writing of the entire table.
 
@@ -93,29 +95,58 @@ object StreamHandlerKafka {
                   it will be equivalent to Append mode.
   */
 
-//    // console
-//    val consoleQuery = rawDF
-//      .writeStream
-//      .format("console")
-//      .outputMode("update")
-//      .start()
-//    consoleQuery.awaitTermination()
-//
+   // Trigger Details
+    /*
+
+This indicates when to trigger the discovery and processing of newly available
+streaming data. There are four options:
+Default
+When the trigger is not explicitly specified, then by default, the streaming
+query executes data in micro-batches where the next micro-batch is triggered
+as soon as the previous micro-batch has completed.
+Processing time with trigger interval
+You can explicitly specify the ProcessingTime trigger with an interval, and
+the query will trigger micro-batches at that fixed interval.
+Once
+In this mode, the streaming query will execute exactly one micro-batch—it
+processes all the new data available in a single batch and then stops itself.
+This is useful when you want to control the triggering and processing from
+an external scheduler that will restart the query using any custom schedule
+(e.g., to control cost by only executing a query once per day).
+Continuous
+This is an experimental mode (as of Spark 3.0) where the streaming query
+will process data continuously instead of in micro-batches. While only a
+small subset of DataFrame operations allow this mode to be used, it can provide
+much lower latency (as low as milliseconds) than the micro-batch trigger
+modes. Refer to the latest Structured Streaming Programming Guide for
+the most up-to-date information.
+*/
+
+
+
+    // console
+    val consoleQuery = rawDF
+      .writeStream
+      .format("console")
+      .outputMode("update")
+      .option("numRows","1")
+      .start()
+    println(consoleQuery.lastProgress)
+    consoleQuery.awaitTermination()
+
+
     // foreach writer
-
-    val customWriter = new JDBCSink(prop.getProperty("url"),prop.getProperty("user"),prop.getProperty("password"))
+   /* val customWriter = new JDBCSink(prop.getProperty("url"),prop.getProperty("user"),prop.getProperty("password"))
     val foreachQuery=rawDF.writeStream.foreach(customWriter).outputMode("append").start()
-    foreachQuery.awaitTermination()
+    foreachQuery.awaitTermination()*/
 
-    // foreachbatch
-    val foreachBatchQuery = rawDF.writeStream.foreachBatch(forEachBatchSink).outputMode("append").start()
-    foreachBatchQuery.awaitTermination()
-
-
+    // foreach batch
+   /* val foreachBatchQuery = rawDF.writeStream.foreachBatch(forEachBatchSink).outputMode("append").start()
+    foreachBatchQuery.awaitTermination()*/
 
   }
-  def forEachBatchSink = (df:Dataset[DeviceData],batchId:Long) => {
+/*  def forEachBatchSink = (df:Dataset[DeviceData],batchId:Long) => {
     df.write.mode(SaveMode.Append).jdbc(prop.getProperty("url"),"trace.table_name",prop)
-  }
+  }*/
 
 }
