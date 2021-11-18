@@ -79,6 +79,7 @@ object StreamHandlerKafka {
       get_json_object(($"value").cast("string"),"$.pres").alias("pres").cast(DoubleType),
       get_json_object(($"value").cast("string"),"$.current_time").alias("timestamp")
     ).withColumn("timestamp",to_timestamp(col("timestamp")))
+      .groupBy($"device",window($"timestamp","30 seconds")).count()
 //      .withWatermark("timestamp","10 minutes").as[DeviceData]
 
    // Output modes
@@ -129,7 +130,7 @@ the most up-to-date information.
       .writeStream
       .format("console")
       .outputMode("update")
-      .option("numRows","1")
+      .option("numRows","100")
       .start()
     println(consoleQuery.lastProgress)
     consoleQuery.awaitTermination()
